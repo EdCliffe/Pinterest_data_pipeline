@@ -1,8 +1,10 @@
+#%%
 from fastapi import FastAPI
 from pydantic import BaseModel
 import uvicorn
 from json import dumps
 from kafka import KafkaProducer
+
 
 app = FastAPI()
 
@@ -25,6 +27,15 @@ class Data(BaseModel):
 @app.post("/pin/")
 def get_db_row(item: Data):
     data = dict(item)
+
+
+    pin_producer = KafkaProducer(
+    bootstrap_servers="localhost:9092",
+    client_id="Pinterest_pipeline",
+    value_serializer=lambda mlmessage: dumps(mlmessage).encode("ascii"))
+
+    pin_producer.send(topic="PinterestTopic", value=data)
+    
     return item
 
 
