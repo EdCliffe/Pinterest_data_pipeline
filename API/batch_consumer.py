@@ -17,7 +17,7 @@ data_batch_consumer.subscribe(topics=["PinterestTopic"])
 s3_client = boto3.client('s3')
 
 for msg in data_batch_consumer:
-    message_id = uuid.uuid4
+    message_id = uuid.uuid4()
     with open("message.json", "w") as outfile:
         json.dump("PinterestTopic=%s,Message=%s"%(msg.topic,msg.value), outfile)
     
