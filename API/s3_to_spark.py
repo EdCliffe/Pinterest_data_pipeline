@@ -40,9 +40,10 @@ json_list = []
 
 obj = s3.Object(bucket_name='pinbucket2', key=f'0187e56d-00ba-4be5-9a0a-10c46ead7309.txt').get() 
 obj_string_to_json = obj["Body"].read().decode('utf-8') 
-data = dumps(obj_string_to_json).replace("'", '"').rstrip('"').lstrip('"') 
+data = dumps(obj_string_to_json).replace("'", '"').rstrip('"').lstrip('"')
+data = data[40::]
 json_list.append(data) 
 print(json_list)
 
 df = spark.read.option("mode", "PERMISSIVE").option("columnNameOfCorruptRecord", "_corrupt_record").json(sc.parallelize(json_list))
-df.show(n=20,truncate=100)
+df.show(n=20,truncate=300)
