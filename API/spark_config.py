@@ -6,8 +6,9 @@ import multiprocessing
 from pyspark import SparkContext, SparkConf
 import pyspark
 import os
-aws_access_key_id = os.environ["aws_access_key_id"]
-aws_secret_access_key = os.environ["aws_secret_access_key"]
+import boto3
+aws_access_key_id = os.environ["AWS_ACCESS_KEY_ID"]
+aws_secret_access_key = os.environ["AWS_SECRET_ACCESS_KEY"]
 cfg = (
     pyspark.SparkConf()
     # Setting the master to run locally and with the maximum amount of cpu coresfor multiprocessing.
@@ -29,25 +30,34 @@ cfg = (
 # # Listing all of them in string readable format
 # print(cfg.toDebugString())
 
-print("1st line is printed")
+
 
 #sc._jsc.hadoopConfiguration().set("fs.s3n.awsAccessKeyId", AWS_ACCESS_KEY)
 #sc._jsc.hadoopConfiguration().set("fs.s3n.awsSecretAccessKey", AWS_SECRET_KEY)
 
 session = pyspark.sql.SparkSession.builder.config(conf=cfg).getOrCreate()
+print("APP Name :"+session.sparkContext.appName)
 # config_dict = {"fs.s3n.awsAccessKeyId":"aws_access_key_id",
 #                "fs.s3n.awsSecretAccessKey":"aws_secret_access_key"}
 # spark.sparkContext.hadoopConfiguration.set(config_dict)
-bucket = "pinbucket2"
-prefix = "0187e56d-00ba-4be5-9a0a-10c46ead7309"
-filename = "s3://{}/{}".format(bucket, prefix)
+# bucket = "pinbucket2"
+# prefix = "0187e56d-00ba-4be5-9a0a-10c46ead7309.txt"
+# filename = "s3://{}/{}".format(bucket, prefix)
 
-def g(x):
-    return print(x)
+s3 = boto3.resource('s3')
+# get a handle on the bucket that holds your file
+bucket = s3.Bucket('pinbucket2')
+# get a handle on the object you want (i.e. your file)
+obj = bucket.Object(key='0187e56d-00ba-4be5-9a0a-10c46ead7309.txt')
+# get the object
+response = obj.get()['Body']
 
-rdd = session.SparkContext.textFile(filename)
-col = rdd.collect()
-for x in col:
-    print(x)
+print(response)
+print(type(response))
+# read the contents of the file and split it into a list of lines
 
-print("2nd line is printed")
+
+df = session.read.json(response)
+df.print()
+# rdd = session.read.text(lines)
+# col = rdd.collect()
