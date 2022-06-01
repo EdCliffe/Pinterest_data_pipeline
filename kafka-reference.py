@@ -13,7 +13,7 @@
 # bin/kafka-topics.sh --create --topic PinterestTopic --partitions 1 --replication-factor 1 --bootstrap-server localhost:9092
 
 # Create producer
-# kafka-console-producer.sh --topic MyFirstKafkaTopic --bootstrap-server localhost:9092 
+# bin/kafka-console-producer.sh --topic PinterestTopic --bootstrap-server localhost:9092 
 
 # Create Consumer
 # kafka-console-consumer.sh --topic MyFirstKafkaTopic --from-beginning --bootstrap-server localhost:9092 
@@ -21,6 +21,8 @@
 # Check topics
 # ./bin/kafka-topics.sh --list --bootstrap-server localhost:9092
 
+# List available brokers
+#  ./bin/zookeeper-shell.sh localhost:2181 ls /brokers/ids
 from kafka import KafkaClient
 from kafka.cluster import ClusterMetadata
 
