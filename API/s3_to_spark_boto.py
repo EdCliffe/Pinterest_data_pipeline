@@ -1,5 +1,5 @@
 # submit command 
-# spark-submit --packages com.datastax.spark:spark-cassandra-connector-assembly_2.12:3.2.0 ~/Work/Packages/Pinterest_data_pipeline/API/s3_to_spark.py
+# spark-submit --packages com.datastax.spark:spark-cassandra-connector-assembly_2.12:3.2.0 ~/Work/Packages/Pinterest_data_pipeline/API/s3_to_spark_boto.py
 
 from pyspark.sql import SparkSession
 from pyspark import SparkContext, SparkConf
@@ -34,16 +34,18 @@ bucket=s3.Bucket('pin-API')
 # os.environ['PYSPARK_SUBMIT_ARGS'] = '--packages com.datastax.spark:spark-cassandra-connector-assembly_2.12:3.2.0 S3_to_Spark.py pyspark-shell' 
 spark = SparkSession.builder.master("local").appName("testapp").getOrCreate() 
 sc = spark.sparkContext 
-
-
+#
+# Processing notes
+# Make follower count a real number
+# Make tags list a real list
 json_list = [] 
-
-obj = s3.Object(bucket_name='pinbucket2', key=f'0187e56d-00ba-4be5-9a0a-10c46ead7309.txt').get() 
-obj_string_to_json = obj["Body"].read().decode('utf-8') 
-data = dumps(obj_string_to_json).replace("'", '"').rstrip('"').lstrip('"')
-data = data[40::]
-json_list.append(data) 
-print(json_list)
+for i in range(1,10):
+    obj = s3.Object(bucket_name='pinbucket2', key=f'user_post_{i}.json').get() 
+    obj_string_to_json = obj["Body"].read().decode('utf-8') 
+    data = dumps(obj_string_to_json).replace("'", '"').rstrip('"').lstrip('"')
+    data = data[40::]
+    json_list.append(data) 
+    print(json_list)
 
 df = spark.read.option("mode", "PERMISSIVE").option("columnNameOfCorruptRecord", "_corrupt_record").json(sc.parallelize(json_list))
 df.show(n=20,truncate=300)
