@@ -29,5 +29,11 @@ hadoopConf.set('spark.hadoop.fs.s3a.aws.credentials.provider', 'org.apache.hadoo
 spark=SparkSession(sc)
 
 # Read from the S3 bucket
-df = spark.read.json("s3a://pinbucket2/user_post_1.json") # You may want to change this to read csv depending on the files your reading from the bucket
-# df.show()
+df = spark.read.text("s3a://pinbucket2/user_post_146.json") # You may want to change this to read csv depending on the files your reading from the bucket
+df.show(truncate=False)
+df.printSchema()
+
+# make taglist a list, rather than string
+# name file by unique ID
+# make the follower count an actual number
+# could group them by category
