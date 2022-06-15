@@ -5,7 +5,6 @@
 from pyspark.sql import SparkSession
 from pyspark import SparkContext, SparkConf
 import os
-
 # Adding the packages required to get data from S3  
 # os.environ["PYSPARK_SUBMIT_ARGS"] = "--packages com.amazonaws:aws-java-sdk-s3:1.12.196,org.apache.hadoop:hadoop-aws:3.3.1 pyspark-shell"
 
@@ -31,9 +30,16 @@ spark=SparkSession(sc)
 # Read from the S3 bucket
 df = spark.read.json("s3a://pinbucket2/user_post_190.json") # You may want to change this to read csv depending on the files your reading from the bucket
 df.show(truncate=False)
-df.select(df['category']).show()
 
-# make taglist a list, rather than string
+# make taglist a list, rather than string?
+
+# df.withColumn("address",
+#   regexp_replace($"address", "Rd", "Road"))
+#   .show()
+
+# df.select(regexp_replace('str', r'(\d+)', '--').alias('d')).collect())
+
+# df.withColumn("tag_list", col("tag_list").cast("list"))
 
 # name file by unique ID
 # make the follower count an actual number
