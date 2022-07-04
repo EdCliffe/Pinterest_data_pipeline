@@ -5,6 +5,9 @@ import pyspark.sql.types as T
 from pyspark.sql.functions import split, col
 from pyspark.sql import SparkSession
 from pyspark import SparkContext, SparkConf
+from pyspark.sql.types import IntegerType, Row
+from pyspark.sql.types import StringType
+from pyspark.sql.functions import udf
 import re
 import os
 # Adding the packages required to get data from S3  
@@ -49,20 +52,25 @@ def follower_count_num(count):
     count = re.sub('k','000', count)
     count = re.sub('M','000000', count)
     count = re.sub('B','000000000', count)
-    return print(count)
+    count = int(count)
+    return count # type = row
 
+# use UDF to apply function to change value in withColumn
 
-# create rdd, and do regex as map function
-df3 = df2.select("follower_count")
-rdd = df3.rdd
-rdd2 = rdd.map(lambda x: follower_count_num(str(x)))
+udf_func = udf(lambda x: follower_count_num(x),returnType=IntegerType())
 
-# take value produced by rdd and update DF
+df2 = df2.withColumn("follower_count",udf_func(df2.follower_count))
 
-df2 = df2.withColumn("follower_count", follower_df)
-df2.show(truncate=False)
 
 # Make save-location into just a file path
 
 # Save location as a path, string
 # "save_location": "Local save in /data/travel"} -> "save_location": "/data/travel"
+# slice on 16th character using spark tool substr (slicing)
+
+df2 = (
+    df2
+    .withColumn('length', F.length('save_location'))
+    .withColumn('save_location', F.col('save_location').substr(F.lit(15), F.col('length')))
+)
+df2.show(truncate=False)
