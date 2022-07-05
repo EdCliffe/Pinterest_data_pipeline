@@ -18,10 +18,9 @@ s3_client = boto3.client('s3')
 i = 1
 for msg in data_batch_consumer:
     message_id = i
-    i= i+1
     with open("message.json", "w") as outfile:
         # json.dump("PinterestTopic=%s,Message=%s"%(msg.topic,msg.value), outfile)
         json.dump(msg.value, outfile)
-    response = s3_client.upload_file("message.json" , 'pinbucket2', f"user_post_{message_id}.json")
-
+    response = s3_client.upload_file("message.json" , 'pinbucket2', f"user_post_{i}.json")
+    i= i+1
 # Need to sort out aws access keys and so on...
