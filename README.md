@@ -1,4 +1,5 @@
 # Pinterest_data_pipeline
+- UML diagram of project: https://user-images.githubusercontent.com/94751059/177628201-85cafdf7-4fc1-4273-922f-a1c1ec0253b5.png
 ## Data Source to storage
 - Two pieces of code are used as a starting point. An infinite posting loop, found in the user posting folder, which simulates a users activity on-site and posts it to a localhost port. The other is project_pin_API built using FastAPI which registers this users information as it is posted.
 - project_pin_API.py also sets up a Kafka producer and sends the message to the topic.
