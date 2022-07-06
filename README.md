@@ -11,6 +11,7 @@
 - The cleaned userpost is then stored in Cassandra using the datastax connector, and the final line of the s3_to_spark_connector.py.
 ## Presto
 - Presto is installed, connected and used to query the cassandra database.
+> - image: https://user-images.githubusercontent.com/94751059/177627935-2d697ead-7334-4bad-8ec4-3de2372d785f.png
 ## Automation
 - Airflow is used to run s3-clean-to-cassandra job on a timer. The airflow file "pin-dag" is included.
 > - image: https://user-images.githubusercontent.com/94751059/177627469-fc288a39-486f-4669-869a-96d199798f0b.png
