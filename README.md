@@ -9,6 +9,8 @@
 > - Change the file path into usable path. "File path is /data/post" -> "/data/post"
 > - Convert the list stored as a string, into an actual list. "one, two, three" -> [one, two, three]
 - The cleaned userpost is then stored in Cassandra using the datastax connector, and the final line of the s3_to_spark_connector.py.
+## Presto
+- Presto is installed, connected and used to query the cassandra database.
 ## Automation
 - Airflow is used to run s3-clean-to-cassandra job on a timer. The airflow file "pin-dag" is included.
 > - image: https://user-images.githubusercontent.com/94751059/177627469-fc288a39-486f-4669-869a-96d199798f0b.png
