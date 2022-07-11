@@ -42,3 +42,10 @@ CREATE TABLE pinkeyspace.userposts (category text, index int, unique_id UUID PRI
 SELECT * FROM pinkeyspace.userposts
 
 ALTER TABLE pinkeyspace.userposts ADD length int;
+
+Find processes
+ps -aux | grep 7199
+kill 9 <pid of the process>
+
+start grafana
+sudo systemctl enable grafana-server.service

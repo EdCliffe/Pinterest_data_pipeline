@@ -1,4 +1,4 @@
-# submit command, without hashes
+# submit command, without hash, in Programs / spark / bin
 # spark-submit --packages com.amazonaws:aws-java-sdk-s3:1.12.196,org.apache.hadoop:hadoop-aws:3.3.1,com.datastax.spark:spark-cassandra-connector_2.12:3.2.0 ~/Work/Packages/Pinterest_data_pipeline/API/s3_to_spark_connector.py
 
 from pyspark.sql import functions as F
@@ -32,7 +32,7 @@ hadoopConf.set('spark.hadoop.fs.s3a.aws.credentials.provider', 'org.apache.hadoo
 spark=SparkSession(sc)
 
 # Read from the S3 bucket - iterate through contents
-for i in range(100,120):
+for i in range(140,150):
     filename = f"user_post_{i}"
 
     df = spark.read.json(f"s3a://pinbucket2/{filename}.json") # You may want to change this to read csv depending on the files your reading from the bucket
