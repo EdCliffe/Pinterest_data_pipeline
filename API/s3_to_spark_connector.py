@@ -32,59 +32,58 @@ hadoopConf.set('spark.hadoop.fs.s3a.aws.credentials.provider', 'org.apache.hadoo
 spark=SparkSession(sc)
 
 # Read from the S3 bucket - iterate through contents
-for i in range(140,150):
-    filename = f"user_post_{i}"
+filename = f"user_post_{i}"
 
-    df = spark.read.json(f"s3a://pinbucket2/{filename}.json") # You may want to change this to read csv depending on the files your reading from the bucket
+df = spark.read.json(f"s3a://pinbucket2/*.json") # You may want to change this to read csv depending on the files your reading from the bucket
 
-    # Replace tag_list with an actual list, splitting on commas
-    df2 = df.withColumn("tag_list", split(df.tag_list, ","))
+# Replace tag_list with an actual list, splitting on commas
+df2 = df.withColumn("tag_list", split(df.tag_list, ","))
 
-    # make the follower count an actual number
+# make the follower count an actual number
 
-    # regex replacing k with 000, and m, B with 000000 & 0000000? data type to integer
+# regex replacing k with 000, and m, B with 000000 & 0000000? data type to integer
 
-    def follower_count_num(count):
-        count = re.sub('k','000', count)
-        count = re.sub('M','000000', count)
-        count = re.sub('B','000000000', count)
-        count = int(count)
-        return count # type = row
+def follower_count_num(count):
+    count = re.sub('k','000', count)
+    count = re.sub('M','000000', count)
+    count = re.sub('B','000000000', count)
+    count = int(count)
+    return count # type = row
 
-    # use UDF to apply function to change value in withColumn
+# use UDF to apply function to change value in withColumn
 
-    udf_func = udf(lambda x: follower_count_num(x),returnType=IntegerType())
+udf_func = udf(lambda x: follower_count_num(x),returnType=IntegerType())
 
-    df2 = df2.withColumn("follower_count",udf_func(df2.follower_count))
+df2 = df2.withColumn("follower_count",udf_func(df2.follower_count))
 
 
-    # Make save-location into just a file path
+# Make save-location into just a file path
 
-    # "save_location": "Local save in /data/travel"} -> "save_location": "/data/travel"
-    # slice on 16th character using spark tool substr (slicing)
+# "save_location": "Local save in /data/travel"} -> "save_location": "/data/travel"
+# slice on 16th character using spark tool substr (slicing)
 
-    df2 = (
-        df2
-        .withColumn('length', F.length('save_location'))
-        .withColumn('save_location', F.col('save_location').substr(F.lit(15), F.col('length')))
-    )
-    # alter column title index to index_no
+df2 = (
+    df2
+    .withColumn('length', F.length('save_location'))
+    .withColumn('save_location', F.col('save_location').substr(F.lit(15), F.col('length')))
+)
+df3 = df2.drop('length')
+# alter column title index to index_no
 
-    df3 = df2.drop('length')
-    df3 = df3.withColumnRenamed("index", "index_no")
-    df3.show(truncate=False)
 
-    #Created Cassandra keyspace and table in cqlsh
+df3 = df3.withColumnRenamed("index", "index_no")
+df3.show(truncate=False)
 
-    # CREATE KEYSPACE pinkeyspace
-    #   WITH REPLICATION = { 
-    #    'class' : 'SimpleStrategy', 
-    #    'replication_factor' : 1 
-    #   };
+#Created Cassandra keyspace and table in cqlsh
 
-    # CREATE TABLE pinkeyspace.userposts (category text, index int, unique_id UUID PRIMARY KEY, title text, description text, follower_count int, tag_list list<text>, is_image_or_video text, image_src text, downloaded int, save_location text);
+# CREATE KEYSPACE pinkeyspace
+#   WITH REPLICATION = { 
+#    'class' : 'SimpleStrategy', 
+#    'replication_factor' : 1 
+#   };
 
-    #Write to cassandra table
+# CREATE TABLE pinkeyspace.userposts (category text, index int, unique_id UUID PRIMARY KEY, title text, description text, follower_count int, tag_list list<text>, is_image_or_video text, image_src text, downloaded int, save_location text);
 
-    df3.write.format("org.apache.spark.sql.cassandra").mode('append').options(table="userposts", keyspace="pinkeyspace").save()
+#Write to cassandra table
 
+df3.write.format("org.apache.spark.sql.cassandra").mode('append').options(table="userposts", keyspace="pinkeyspace").save()

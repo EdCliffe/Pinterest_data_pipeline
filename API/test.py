@@ -9,5 +9,5 @@ def follower_count_num(count):
     count = re.sub('B','000000000', count)
     return print(count)
 
-count = "10k"
+count = "10B"
 follower_count_num(count)
