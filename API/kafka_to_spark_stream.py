@@ -1,5 +1,6 @@
 # Submit to pyspark - run as python file in terminal
 import pyspark.sql.functions as F
+from pyspark.sql.functions import lit
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import when
 from pyspark.sql.functions import expr, col
@@ -69,10 +70,12 @@ def updateFunction(newValues, runningCount):
 def foreach_batch_function(df, epoch_id):
     # add processing steps here
     #total_nulls = df.select(stream_df["*"]).where(stream_df['follower_count']=="User Info Error").updateStateByKey(updateFunction)
-    df = df.withColumn("is_error", True).where(df['follower_count']=="User Info Error")
-    df = df.withColumn("is_error", False).where(df['follower_count']!="User Info Error")
-
-    #slidingWindow = df.withWatermark("timestamp", "1 minutes").groupBy("eventId", window("timestamp", "2 minutes", "1 minutes")).count()slidingWindows.show(truncate = False)
+    df = df.withColumn("is_error", \
+                        when((df.follower_count=="User Info Error"), lit(True)) \
+                        .when((df.follower_count!="User Info Error"), lit(False)) \
+                        )
+    slidingWindows = df.withWatermark("timestamp", "1 minutes").groupBy("is_error", window("timestamp", "2 minutes", "1 minutes")).count()
+    slidingWindows.show(truncate = False)
     df.show
 
 stream2 = stream_df.writeStream \
@@ -97,10 +100,7 @@ stream2 = stream_df.writeStream \
 
     # time window, posts per minute received
 
-def updateFunction(newValues, runningCount):
-    if runningCount is None:
-        runningCount = 0
-    return sum(newValues, runningCount)
+
 
 # ssc = StreamingContext(stream_df.sparkContext, batchDuration=30)  # AttributeError: 'DataFrame' object has no attribute 'sparkContext'
 
@@ -138,9 +138,8 @@ def updateFunction(newValues, runningCount):
 
 
 # outputting the messages to the console 
-# total_nulls.writeStream \
-#     .foreachBatch \
-#     .format("console") \
-#     .outputMode("append") \
-#     .start() \
-#     .awaitTermination()
+stream2.writeStream \
+    .format("console") \
+    .outputMode("append") \
+    .start() \
+    .awaitTermination()
