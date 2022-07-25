@@ -74,9 +74,14 @@ def foreach_batch_function(df, epoch_id):
                         when((df.follower_count=="User Info Error"), lit(True)) \
                         .when((df.follower_count!="User Info Error"), lit(False)) \
                         )
-    slidingWindows = df.withWatermark("timestamp", "1 minutes").groupBy("is_error", window("timestamp", "2 minutes", "1 minutes")).count()
+    slidingWindows = df.withWatermark("timestamp", "1 minutes") \
+                    .groupBy(
+                        window(df.timestamp, "2 minutes", "1 minutes"),
+                        df.is_error) \
+                    .count()
+
     slidingWindows.show(truncate = False)
-    df.show
+    # df.show
 
 stream2 = stream_df.writeStream \
     .foreachBatch(foreach_batch_function) \
