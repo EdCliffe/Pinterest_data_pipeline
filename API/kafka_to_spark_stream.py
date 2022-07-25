@@ -110,6 +110,9 @@ df2 = df2.drop('length')
 
 df2 = df2.withColumnRenamed("index", "index_no")
 
+df2= df2.withColumn("downloaded", df2["downloaded"].cast("int")) \
+                    .withColumn("index_no", df2["index_no"].cast("int"))
+
 # Stream function =========================
 
 def updateFunction(newValues, runningCount):
@@ -142,14 +145,6 @@ stream2 = df2.writeStream \
 # 1. write stream, taking in dataframe and epoch ID - each batch is a micro dataframe
 #  2. functions - groupby / count(?)
 #  3. spark.write   4. save
-
-# replace empty cells with Nones
-# stream_df = stream_df.replace({'User Info Error': None}, subset = ['follower_count']) \
-#                      .replace({"No Title Data Available": None}, subset = ['title']) \
-#                      .replace({'No description available Story format': None}, subset = ['description']) \
-#                      .replace({'Image src error.': None}, subset = ['image_src']) \
-#                      .replace({"N,o, ,T,a,g,s, ,A,v,a,i,l,a,b,l,e" : None}, subset = ['tag_list'])
-
 
     # Process data, extract 2 metrics, clean a bit, save to disk? save to s3? add a checkpoint?
 
