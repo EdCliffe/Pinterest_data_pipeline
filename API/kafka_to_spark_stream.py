@@ -7,7 +7,8 @@ from pyspark.sql.functions import expr, col
 from pyspark.sql.types import StructType, StructField, IntegerType, LongType, StringType, FloatType
 from pyspark.streaming import StreamingContext
 from pyspark.sql.functions import *
-
+from pyspark.sql.functions import udf
+import re
 import os
 import findspark
 
@@ -44,7 +45,7 @@ stream_df = stream_df.selectExpr("CAST(value as STRING)", "timestamp as timestam
 
 # if stream_df[]
 # total_nulls = stream_df.select(stream_df["*"]).where(stream_df['follower_count']=="User Info Error").updateStateByKey(updateFunction)
-
+# Replace empty cells with None
 
 jsonSchema = StructType([StructField("category", StringType()),
             StructField("index", IntegerType()),
@@ -62,18 +63,67 @@ jsonSchema = StructType([StructField("category", StringType()),
 stream_df = stream_df.withColumn("value", F.from_json(stream_df["value"], jsonSchema)).select(col("value.*"), "timestamp")
 # include timestamp column 
 
+# Clean data ==============
+
+# Replace tag_list with an actual list, splitting on commas
+stream_df = stream_df.withColumn("tag_list", split(stream_df.tag_list, ","))
+
+
+# replace empty cells with Nones
+df2 = stream_df.replace({'User Info Error': None}, subset = ['follower_count']) \
+                     .replace({"No Title Data Available": None}, subset = ['title']) \
+                     .replace({'No description available Story format': None}, subset = ['description']) \
+                     .replace({'Image src error.': None}, subset = ['image_src'])
+                     
+# make the follower count an actual number
+# regex replacing k with 000, and m, B with 000000 & 0000000? data type to integer
+
+def follower_count_num(count):
+    if type(count) == str:
+        count = re.sub('k','000', count)
+        count = re.sub('M','000000', count)
+        count = re.sub('B','000000000', count)
+        count = int(count)
+    return count # type = row
+
+
+# use UDF to apply function to change value in withColumn
+
+udf_func = udf(lambda x: follower_count_num(x),returnType=IntegerType())
+
+df2 = df2.withColumn("follower_count",udf_func(df2.follower_count))
+
+
+# Make save-location into just a file path
+
+# "save_location": "Local save in /data/travel"} -> "save_location": "/data/travel"
+# slice on 16th character using spark tool substr (slicing)
+
+df2 = (
+    df2
+    .withColumn('length', F.length('save_location'))
+    .withColumn('save_location', F.col('save_location').substr(F.lit(15), F.col('length')))
+)
+df2 = df2.drop('length')
+# alter column title index to index_no
+
+
+df2 = df2.withColumnRenamed("index", "index_no")
+
+# Stream function =========================
+
 def updateFunction(newValues, runningCount):
     if runningCount is None:
         runningCount = 0
     return sum(newValues, runningCount)
 
+
 def foreach_batch_function(df, epoch_id):
     # add processing steps here
     #total_nulls = df.select(stream_df["*"]).where(stream_df['follower_count']=="User Info Error").updateStateByKey(updateFunction)
-    df = df.withColumn("is_error", \
-                        when((df.follower_count=="User Info Error"), lit(True)) \
-                        .when((df.follower_count!="User Info Error"), lit(False)) \
-                        )
+    df = df.withColumn("is_error", df.follower_count.isNull())
+
+                            
     slidingWindows = df.withWatermark("timestamp", "1 minutes") \
                     .groupBy(
                         window(df.timestamp, "2 minutes", "1 minutes"),
@@ -83,7 +133,7 @@ def foreach_batch_function(df, epoch_id):
     slidingWindows.show(truncate = False)
     # df.show
 
-stream2 = stream_df.writeStream \
+stream2 = df2.writeStream \
     .foreachBatch(foreach_batch_function) \
     .start() \
     .awaitTermination()
@@ -143,7 +193,7 @@ stream2 = stream_df.writeStream \
 
 
 # outputting the messages to the console 
-stream2.writeStream \
+df2.writeStream \
     .format("console") \
     .outputMode("append") \
     .start() \
