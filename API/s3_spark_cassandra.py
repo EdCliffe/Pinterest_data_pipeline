@@ -56,10 +56,8 @@ udf_func = udf(lambda x: follower_count_num(x),returnType=IntegerType())
 df2 = df2.withColumn("follower_count",udf_func(df2.follower_count))
 
 
-# Make save-location into just a file path
-
+# Make save-location into a file path
 # "save_location": "Local save in /data/travel"} -> "save_location": "/data/travel"
-# slice on 16th character using spark tool substr (slicing)
 
 df2 = (
     df2

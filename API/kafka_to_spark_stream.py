@@ -10,6 +10,7 @@ from pyspark.sql.types import StructType, StructField, IntegerType, LongType, St
 from pyspark.streaming import StreamingContext
 from pyspark.sql.functions import *
 from pyspark.sql.functions import udf
+from pyspark.sql.functions import count as C
 import re
 import os
 import findspark
@@ -64,8 +65,7 @@ jsonSchema = StructType([StructField("category", StringType()),
 stream_df = stream_df.withColumn("value", F.from_json(stream_df["value"], jsonSchema)).select(col("value.*"), "timestamp")
 
 
-# Clean data ==============
-
+# -- Clean data --
 # Replace tag_list with an actual list, splitting on commas
 stream_df = stream_df.withColumn("tag_list", split(stream_df.tag_list, ","))
 
@@ -87,18 +87,15 @@ def follower_count_num(count):
         count = int(count)
     return count # type = row
 
-
 # use UDF to apply function to change value in withColumn
 
 udf_func = udf(lambda x: follower_count_num(x),returnType=IntegerType())
-
 df2 = df2.withColumn("follower_count",udf_func(df2.follower_count))
 
 
 # Make save-location into just a file path
+# "save_location": "Local save in /data/travel" -> "save_location": "/data/travel"
 
-# "save_location": "Local save in /data/travel"} -> "save_location": "/data/travel"
-# slice on 16th character using spark tool substr (slicing)
 
 df2 = (
     df2
@@ -106,20 +103,20 @@ df2 = (
     .withColumn('save_location', F.col('save_location').substr(F.lit(15), F.col('length')))
 )
 df2 = df2.drop('length')
+
 # alter column title index to index_no
-
-
 df2 = df2.withColumnRenamed("index", "index_no")
 
 df2= df2.withColumn("downloaded", df2["downloaded"].cast("int")) \
                     .withColumn("index_no", df2["index_no"].cast("int"))
 
 # Stream function =========================
-
+runningCount = None
 def updateFunction(newValues, runningCount):
     if runningCount is None:
         runningCount = 0
-    return sum(newValues, runningCount)
+    runningCount = newValues + runningCount
+    return runningCount
 
 
 def foreach_batch_function(df, epoch_id):
@@ -127,12 +124,19 @@ def foreach_batch_function(df, epoch_id):
     #total_nulls = df.select(stream_df["*"]).where(stream_df['follower_count']=="User Info Error").updateStateByKey(updateFunction)
     df = df.withColumn("is_error", df.follower_count.isNull())
 
-                            
     slidingWindows = df.withWatermark("timestamp", "1 minutes") \
                     .groupBy(
                         window(df.timestamp, "2 minutes", "1 minutes"),
-                        df.is_error) \
-                    .count()
+                        df.is_error).count()
+    
+    #print(updateFunction(when(slidingWindows.is_error == True, slidingWindows.select("count")), runningCount))
+    # print(slidingWindows.collect()[0][2])
+
+
+    if slidingWindows.collect()[0][1] == True:
+        updateFunction(slidingWindows.collect()[0][2], runningCount)
+        print("Errors so far ", runningCount)
+
 
     slidingWindows.show(truncate = False)
     

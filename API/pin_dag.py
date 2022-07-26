@@ -5,21 +5,15 @@ from airflow.operators.bash_operator import BashOperator
 
 
 default_args = {
-    'owner': 'Ivan',
+    'owner': 'Ed',
     'depends_on_past': False,
-    'email': ['ivan@theaicore.com'],
+    'email': ['ed.cliffe1@gmail.com'],
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
-    'start_date': datetime(2020, 1, 1),
+    'start_date': datetime(20202, 7, 1),
     'retry_delay': timedelta(minutes=5),
-    'end_date': datetime(2022, 1, 1),
-    # 'queue': 'bash_queue',
-    # 'pool': 'backfill',
-    # 'priority_weight': 10,
-    # 'wait_for_downstream': False,
-    # 'dag': dag,
-    # 'trigger_rule': 'all_success'
+    'end_date': datetime(2022, 7, 30),
 }
 
 with DAG(dag_id='pin_dag',
