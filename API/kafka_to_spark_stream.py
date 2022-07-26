@@ -1,4 +1,6 @@
 # Submit to pyspark - run as python file in terminal
+# to include postgres in spark classpath 
+# ./bin/spark-shell --driver-class-path postgresql-9.4.1207.jar --jars postgresql-9.4.1207.jar
 import pyspark.sql.functions as F
 from pyspark.sql.functions import lit
 from pyspark.sql import SparkSession
@@ -14,9 +16,10 @@ import findspark
 
 findspark.init()
 
-
 # Download spark sql kakfa package from Maven repository and submit to PySpark at runtime. 
-os.environ['PYSPARK_SUBMIT_ARGS'] = '--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.1 pyspark-shell'
+os.environ['PYSPARK_SUBMIT_ARGS'] = '--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.1,org.postgresql:postgresql:42.2.6 pyspark-shell' #--jars postgresql-42.2.6.jar'
+# --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0,org.postgresql:postgresql:42.2.10 pyspark-shell'
+
 # specify the topic we want to stream data from.
 kafka_topic_name = "PinterestTopic"
 # Specify your Kafka server to read data from.
@@ -41,10 +44,8 @@ stream_df = spark \
 
 # Select the value part of the kafka message and cast it to a string.
 stream_df = stream_df.selectExpr("CAST(value as STRING)", "timestamp as timestamp")
-# could add timestamp in new column here
 
-# if stream_df[]
-# total_nulls = stream_df.select(stream_df["*"]).where(stream_df['follower_count']=="User Info Error").updateStateByKey(updateFunction)
+
 # Replace empty cells with None
 
 jsonSchema = StructType([StructField("category", StringType()),
@@ -61,7 +62,7 @@ jsonSchema = StructType([StructField("category", StringType()),
 
 # convert JSON column to multiple columns
 stream_df = stream_df.withColumn("value", F.from_json(stream_df["value"], jsonSchema)).select(col("value.*"), "timestamp")
-# include timestamp column 
+
 
 # Clean data ==============
 
@@ -132,24 +133,30 @@ def foreach_batch_function(df, epoch_id):
                         window(df.timestamp, "2 minutes", "1 minutes"),
                         df.is_error) \
                     .count()
-
+# .option('user', os.environ["PGADMIN_USER"]) \
+#.option('password', os.environ["PGADMIN_PASS"]) \
     slidingWindows.show(truncate = False)
+    df.write \
+        .mode('append') \
+        .format('jdbc') \
+        .option('url', f'jdbc:postgresql://localhost:5432/pinterest_streaming') \
+        .option('user', 'postgres') \
+        .option('password', os.environ["PGADMIN_PASS"]) \
+        .option('driver', 'org.postgresql.Driver') \
+        .option('dbtable', 'public.pinterest_streaming') \
+        .save()
+
+    # print(os.environ["PGADMIN_USER"])
+    # df.write.jdbc('jdbc:mysql://host:5432/pinterest_streaming', 'experimental_data',
+    #             mode='append',
+    #             properties={'user': os.environ["PGADMIN_USER"], 'password': os.environ["PGADMIN_PASS"]})
+    
     # df.show
 
 stream2 = df2.writeStream \
     .foreachBatch(foreach_batch_function) \
     .start() \
     .awaitTermination()
-
-# create function for each logical step, 
-# 1. write stream, taking in dataframe and epoch ID - each batch is a micro dataframe
-#  2. functions - groupby / count(?)
-#  3. spark.write   4. save
-
-    # Process data, extract 2 metrics, clean a bit, save to disk? save to s3? add a checkpoint?
-
-    # time window, posts per minute received
-
 
 
 # ssc = StreamingContext(stream_df.sparkContext, batchDuration=30)  # AttributeError: 'DataFrame' object has no attribute 'sparkContext'
@@ -170,13 +177,6 @@ stream2 = df2.writeStream \
 # AttributeError: 'DataFrame' object has no attribute 'updateStateByKey'
 
 
-# Convert blank columns to null value
-#stream_df=stream_df.select([when(col(c)=="",None).otherwise(col(c)).alias(c) for c in stream_df.columns])
-
-
-# windowedNullCounts = stream_df.reduceByKeyAndWindow(lambda x, y: x + y, lambda x, y: x - y, 30, 10)
-
-# count values = None in rolling window of 1 minute
 
 # total nulls to date /  total non-nulls todate
 # feature_df = stream_df.groupBy(stream_df.category).count() 

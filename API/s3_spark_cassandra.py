@@ -32,7 +32,7 @@ hadoopConf.set('spark.hadoop.fs.s3a.aws.credentials.provider', 'org.apache.hadoo
 spark=SparkSession(sc)
 
 # Read from the S3 bucket - iterate through contents
-filename = f"user_post_{i}"
+# filename = f"user_post_{i}"
 
 df = spark.read.json(f"s3a://pinbucket2/*.json") # You may want to change this to read csv depending on the files your reading from the bucket
 
@@ -40,7 +40,6 @@ df = spark.read.json(f"s3a://pinbucket2/*.json") # You may want to change this t
 df2 = df.withColumn("tag_list", split(df.tag_list, ","))
 
 # make the follower count an actual number
-
 # regex replacing k with 000, and m, B with 000000 & 0000000? data type to integer
 
 def follower_count_num(count):
@@ -68,9 +67,8 @@ df2 = (
     .withColumn('save_location', F.col('save_location').substr(F.lit(15), F.col('length')))
 )
 df3 = df2.drop('length')
-# alter column title index to index_no
 
-
+# alter column title index to index_no, SQL keyword
 df3 = df3.withColumnRenamed("index", "index_no")
 df3.show(truncate=False)
 

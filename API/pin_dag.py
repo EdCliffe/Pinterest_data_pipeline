@@ -33,5 +33,5 @@ with DAG(dag_id='pin_dag',
     # Spark-submit - Run S3 to spark connector, stores in cassandra
     spark_batch = BashOperator(
         task_id='s3_to_spark_connector',
-        bash_command="spark-submit --packages com.amazonaws:aws-java-sdk-s3:1.12.196,org.apache.hadoop:hadoop-aws:3.3.1,com.datastax.spark:spark-cassandra-connector_2.12:3.2.0 ~/Work/Packages/Pinterest_data_pipeline/API/s3_to_spark_connector.py"
+        bash_command="spark-submit --packages com.amazonaws:aws-java-sdk-s3:1.12.196,org.apache.hadoop:hadoop-aws:3.3.1,com.datastax.spark:spark-cassandra-connector_2.12:3.2.0 ~/Work/Packages/Pinterest_data_pipeline/API/s3_spark_cassandra.py",
         dag=dag)
