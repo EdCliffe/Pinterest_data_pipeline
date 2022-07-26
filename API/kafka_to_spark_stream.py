@@ -133,9 +133,9 @@ def foreach_batch_function(df, epoch_id):
                         window(df.timestamp, "2 minutes", "1 minutes"),
                         df.is_error) \
                     .count()
-# .option('user', os.environ["PGADMIN_USER"]) \
-#.option('password', os.environ["PGADMIN_PASS"]) \
+
     slidingWindows.show(truncate = False)
+    
     df.write \
         .mode('append') \
         .format('jdbc') \
@@ -146,12 +146,6 @@ def foreach_batch_function(df, epoch_id):
         .option('dbtable', 'public.pinterest_streaming') \
         .save()
 
-    # print(os.environ["PGADMIN_USER"])
-    # df.write.jdbc('jdbc:mysql://host:5432/pinterest_streaming', 'experimental_data',
-    #             mode='append',
-    #             properties={'user': os.environ["PGADMIN_USER"], 'password': os.environ["PGADMIN_PASS"]})
-    
-    # df.show
 
 stream2 = df2.writeStream \
     .foreachBatch(foreach_batch_function) \
