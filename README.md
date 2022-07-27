@@ -17,3 +17,11 @@
 - Airflow is used to run s3-clean-to-cassandra job on a timer. The airflow file "pin-dag" is included.
 > - image: https://user-images.githubusercontent.com/94751059/177627469-fc288a39-486f-4669-869a-96d199798f0b.png
 - Prometheus and Grafana are connected to monitor
+![Screenshot from 2022-07-07 21-46-33](https://user-images.githubusercontent.com/94751059/181308713-b64c5569-6307-4882-8241-6cc7778180f5.png)
+
+## Stream processing
+- The userposts are passed from the kafka topic to pyspark. Basic data processing is applied, and a function is applied, which gives live feedback on whether userposts are the result of errors (containing null values). 
+- The processed microbatches are then stored in a local postgres database.
+## Stream monitoring
+- Prometheus and grafana are then used to scrape metrics from postgres, and display dashboards. 
+![Screenshot from 2022-07-26 18-52-42](https://user-images.githubusercontent.com/94751059/181308236-183dcf39-a9c3-4668-82e9-2b00c44e021e.png)
