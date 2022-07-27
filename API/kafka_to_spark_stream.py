@@ -111,15 +111,14 @@ df2= df2.withColumn("downloaded", df2["downloaded"].cast("int")) \
                     .withColumn("index_no", df2["index_no"].cast("int"))
 
 # Stream function =========================
-runningCount = None
-def updateFunction(newValues, runningCount):
-    if runningCount is None:
-        runningCount = 0
-    runningCount = newValues + runningCount
-    return runningCount
+# def updateFunction(newValues, runningCount):
+#     runningCount = newValues + runningCount
+#     return runningCount
 
-
+runningCount = 0
 def foreach_batch_function(df, epoch_id):
+    global runningCount
+
     # add processing steps here
     #total_nulls = df.select(stream_df["*"]).where(stream_df['follower_count']=="User Info Error").updateStateByKey(updateFunction)
     df = df.withColumn("is_error", df.follower_count.isNull())
@@ -134,7 +133,7 @@ def foreach_batch_function(df, epoch_id):
 
 
     if slidingWindows.collect()[0][1] == True:
-        updateFunction(slidingWindows.collect()[0][2], runningCount)
+        runningCount += slidingWindows.collect()[0][2]
         print("Errors so far ", runningCount)
 
 

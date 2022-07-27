@@ -1,0 +1,58 @@
+# Connect to Casandra
+
+# ./bin/pyspark \
+#   --packages com.datastax.spark:spark-cassandra-connector_2.12:3.2.0 \
+#   --conf spark.sql.extensions=com.datastax.spark.connector.CassandraSparkExtensions
+#%%
+
+from cassandra.cluster import Cluster
+
+cluster = Cluster()
+session = cluster.connect('pinkeyspace')
+
+
+./bin/pyspark --master local[*] --packages com.datastax.spark:spark-cassandra-connector_2.11:2.3.2 --conf spark.cassandra.connection.host=host.name --conf spark.cassandra.auth.username=cassandraname --conf spark.cassandra.auth.password=cassandrapwd
+
+>>> df = spark.read.format("org.apache.spark.sql.cassandra")\
+   .options(table="userposts", keyspace="pinkey").load()
+
+>>> df.show()
+
+CREATE KEYSPACE pinkeyspace
+  WITH REPLICATION = { 
+   'class' : 'SimpleStrategy', 
+   'replication_factor' : 1 
+  };
+
+CREATE TABLE pinkeyspace.userposts (category text, index int, unique_id UUID PRIMARY KEY, title text, description text, follower_count int, tag_list list<text>, is_image_or_video text, image_src text, downloaded int, save_location text);
+
+{"category": "tattoos",
+ "index": 8731, 
+ "unique_id": "ea760f71-febf-4023-b592-d17396659039", 
+ "title": "20 Koi Fish Tattoos For Lucky Men", 
+ "description": "Koi fish tattoos are a popular choice for men who want to make a statement, thanks to their rich symbolism and bold design.",
+  "follower_count": "211k",
+   "tag_list": "Dr Tattoo,W\u00f6rter Tattoos,Pisces Tattoos,Tatoo Art,Dream Tattoos,Dope Tattoos,Mini Tattoos,Finger Tattoos,Body Art Tattoos", 
+   "is_image_or_video": "image", 
+   "image_src": "https://i.pinimg.com/originals/8a/0c/0a/8a0c0a7b6236565c519acd41ad1a52c0.jpg", 
+   "downloaded": 1, 
+   "save_location": 
+   "Local save in /data/tattoos"}
+
+SELECT * FROM pinkeyspace.userposts
+
+ALTER TABLE pinkeyspace.userposts ADD length int;
+
+Find processes
+ps -aux | grep 7199
+kill 9 <pid of the process>
+
+start grafana
+sudo systemctl enable grafana-server.service
+
+docker run \
+  --net=host \
+  -e DATA_SOURCE_NAME="user=postgres host=localhost password=$PGADMIN_PASS" \
+  quay.io/prometheuscommunity/postgres-exporter
+
+    'jdbc:postgresql://localhost:5432/pinterest_streaming'
