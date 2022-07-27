@@ -16,10 +16,9 @@ import os
 import findspark
 
 findspark.init()
-
+# -- Set up Stream --
 # Download spark sql kakfa package from Maven repository and submit to PySpark at runtime. 
-os.environ['PYSPARK_SUBMIT_ARGS'] = '--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.1,org.postgresql:postgresql:42.2.6 pyspark-shell' #--jars postgresql-42.2.6.jar'
-# --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0,org.postgresql:postgresql:42.2.10 pyspark-shell'
+os.environ['PYSPARK_SUBMIT_ARGS'] = '--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.1,org.postgresql:postgresql:42.2.6 pyspark-shell' 
 
 # specify the topic we want to stream data from.
 kafka_topic_name = "PinterestTopic"
@@ -46,9 +45,6 @@ stream_df = spark \
 # Select the value part of the kafka message and cast it to a string.
 stream_df = stream_df.selectExpr("CAST(value as STRING)", "timestamp as timestamp")
 
-
-# Replace empty cells with None
-
 jsonSchema = StructType([StructField("category", StringType()),
             StructField("index", IntegerType()),
             StructField("unique_id", StringType()),
@@ -61,7 +57,7 @@ jsonSchema = StructType([StructField("category", StringType()),
             StructField("downloaded", IntegerType()),
             StructField("save_location", StringType())])
 
-# convert JSON column to multiple columns
+# Convert JSON to multiple columns
 stream_df = stream_df.withColumn("value", F.from_json(stream_df["value"], jsonSchema)).select(col("value.*"), "timestamp")
 
 
@@ -70,15 +66,13 @@ stream_df = stream_df.withColumn("value", F.from_json(stream_df["value"], jsonSc
 stream_df = stream_df.withColumn("tag_list", split(stream_df.tag_list, ","))
 
 
-# replace empty cells with Nones
+# Replace empty cells with Nones
 df2 = stream_df.replace({'User Info Error': None}, subset = ['follower_count']) \
                      .replace({"No Title Data Available": None}, subset = ['title']) \
                      .replace({'No description available Story format': None}, subset = ['description']) \
                      .replace({'Image src error.': None}, subset = ['image_src'])
                      
-# make the follower count an actual number
-# regex replacing k with 000, and m, B with 000000 & 0000000? data type to integer
-
+# Make the follower count an actual number, data type to integer
 def follower_count_num(count):
     if type(count) == str:
         count = re.sub('k','000', count)
@@ -88,15 +82,12 @@ def follower_count_num(count):
     return count # type = row
 
 # use UDF to apply function to change value in withColumn
-
 udf_func = udf(lambda x: follower_count_num(x),returnType=IntegerType())
 df2 = df2.withColumn("follower_count",udf_func(df2.follower_count))
 
 
 # Make save-location into just a file path
 # "save_location": "Local save in /data/travel" -> "save_location": "/data/travel"
-
-
 df2 = (
     df2
     .withColumn('length', F.length('save_location'))
@@ -110,35 +101,29 @@ df2 = df2.withColumnRenamed("index", "index_no")
 df2= df2.withColumn("downloaded", df2["downloaded"].cast("int")) \
                     .withColumn("index_no", df2["index_no"].cast("int"))
 
-# Stream function =========================
-# def updateFunction(newValues, runningCount):
-#     runningCount = newValues + runningCount
-#     return runningCount
-
+# -- Stream monitoring and saving function --
 runningCount = 0
+
 def foreach_batch_function(df, epoch_id):
     global runningCount
 
-    # add processing steps here
-    #total_nulls = df.select(stream_df["*"]).where(stream_df['follower_count']=="User Info Error").updateStateByKey(updateFunction)
+    # Add column which indicates True for data containing nulls, and False without
     df = df.withColumn("is_error", df.follower_count.isNull())
-
+    
+    # Group by sliding window
     slidingWindows = df.withWatermark("timestamp", "1 minutes") \
                     .groupBy(
                         window(df.timestamp, "2 minutes", "1 minutes"),
                         df.is_error).count()
-    
-    #print(updateFunction(when(slidingWindows.is_error == True, slidingWindows.select("count")), runningCount))
-    # print(slidingWindows.collect()[0][2])
 
-
+    # Cumulative count of null data in stream so far
     if slidingWindows.collect()[0][1] == True:
         runningCount += slidingWindows.collect()[0][2]
         print("Errors so far ", runningCount)
 
-
     slidingWindows.show(truncate = False)
-    
+
+    # Send processed stream data to postgres
     df.write \
         .mode('append') \
         .format('jdbc') \
@@ -152,41 +137,5 @@ def foreach_batch_function(df, epoch_id):
 
 stream2 = df2.writeStream \
     .foreachBatch(foreach_batch_function) \
-    .start() \
-    .awaitTermination()
-
-
-# ssc = StreamingContext(stream_df.sparkContext, batchDuration=30)  # AttributeError: 'DataFrame' object has no attribute 'sparkContext'
-
-# total_nulls = stream2.select(stream2["*"]).where(stream2['follower_count']=="User Info Error").updateStateByKey(updateFunction) # AttributeError: 'DataFrame' object has no attribute 'updateStateByKey'
-# updatestatebykey requires timestamp
-
-# Running count function
-
-# test = stream_df.select('follower_count')
-
-#totalnulls = stream_df.select(stream_df["*"]).where(stream_df['follower_count']=="User Info Error")  # .updateStateByKey(updateFunction)
-
-
-
-
-#allows us to keep one state and update it continuously with values coming from a stream
-# AttributeError: 'DataFrame' object has no attribute 'updateStateByKey'
-
-
-
-# total nulls to date /  total non-nulls todate
-# feature_df = stream_df.groupBy(stream_df.category).count() 
-
-# saving the ID of the error, or message title
-
-
-# saveAsTextFiles(prefix, [suffix]) 	Save this DStream's contents as text files. The file name at each batch interval is generated based on prefix and suffix: "prefix-TIME_IN_MS[.suffix]".
-
-
-# outputting the messages to the console 
-df2.writeStream \
-    .format("console") \
-    .outputMode("append") \
     .start() \
     .awaitTermination()
